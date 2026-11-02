@@ -40,6 +40,18 @@
       </div>
       <label class="row toggle"><span>Calendar</span><input type="checkbox" data-key="showCalendar" /></label>
       <label class="row toggle"><span>Time passing (day, week, year)</span><input type="checkbox" data-key="showDay" /></label>
+      <label class="row toggle"><span>Weather</span><input type="checkbox" data-key="showWeather" /></label>
+      <div class="row">
+        <label for="weatherCity">Weather city</label>
+        <input type="text" id="weatherCity" data-key="weatherCity" maxlength="60" placeholder="Auto (from your time zone)" spellcheck="false" />
+      </div>
+      <div class="row">
+        <label>Temperature</label>
+        <div class="seg small" data-key="weatherUnit">
+          <button data-value="c">°C</button>
+          <button data-value="f">°F</button>
+        </div>
+      </div>
       <label class="row toggle"><span>Sticky note</span><input type="checkbox" data-key="showNote" /></label>
       <div class="row">
         <label>Note colour</label>

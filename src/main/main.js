@@ -8,6 +8,7 @@ const { MediaReader } = require('./media');
 const { Timeline } = require('./timeline');
 const { fetchLyrics } = require('./lyrics');
 const { Pinner } = require('./zorder');
+const { fetchWeather, cityFromTimeZone } = require('./weather');
 
 const SMOKE = process.env.ISLET_SMOKE === '1'; // CI: start, check the windows load, quit
 const ASSETS = path.join(__dirname, '..', 'assets');
@@ -37,6 +38,10 @@ let lyricsState = { key: null, status: 'none', lines: [] };
 const lyricsCache = new Map();
 const reader = new MediaReader();
 const pinner = new Pinner();
+let weatherState = { ok: false, error: 'not loaded yet' };
+let weatherSeq = 0;
+let weatherTimer = null;
+const geoCache = new Map();
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -315,6 +320,9 @@ function applySettings(prev) {
     applyBounds();
     updateVisibility();
   }
+  if (!prev || prev.weatherCity !== s.weatherCity || prev.weatherUnit !== s.weatherUnit || prev.showWeather !== s.showWeather || prev.widgets !== s.widgets) {
+    refreshWeather();
+  }
   if (!prev || prev.widgets !== s.widgets || prev.widgetsLayer !== s.widgetsLayer || prev.widgetsMonitor !== s.widgetsMonitor) {
     refreshLayer();
     rebuildTrayMenu();
@@ -323,6 +331,32 @@ function applySettings(prev) {
     app.setLoginItemSettings({ openAtLogin: s.startWithWindows });
   }
   broadcast('settings:changed', s);
+}
+
+/* ------------------------------------------------------------------ weather */
+
+function weatherCity() {
+  const typed = store.get().weatherCity;
+  if (typed) return typed;
+  try {
+    return cityFromTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  } catch (e) {
+    return '';
+  }
+}
+
+async function refreshWeather() {
+  clearTimeout(weatherTimer);
+  const s = store.get();
+  if (!s.widgets || !s.showWeather) return;
+  const seq = ++weatherSeq;
+  const result = await fetchWeather({ city: weatherCity(), unit: s.weatherUnit, geoCache });
+  if (seq !== weatherSeq) return; // a newer request (city changed meanwhile) wins
+  if (result.ok || !weatherState.ok) weatherState = result;
+  else weatherState = { ...weatherState, stale: true }; // keep showing the last good reading
+  console.log(`[weather] ${result.ok ? `${result.city} ${result.temp}° ${result.label}` : `failed: ${result.error}`}`);
+  broadcast('weather:data', weatherState);
+  weatherTimer = setTimeout(refreshWeather, result.ok ? 20 * 60 * 1000 : 2 * 60 * 1000);
 }
 
 /* ------------------------------------------------------------- media + lyrics */
@@ -370,7 +404,7 @@ function onSample(sample) {
 /* ------------------------------------------------------------------- IPC */
 
 function registerIpc() {
-  ipcMain.handle('state:get', () => ({ settings: store.get(), media: mediaState, lyrics: lyricsState, moveMode, editMode }));
+  ipcMain.handle('state:get', () => ({ settings: store.get(), media: mediaState, lyrics: lyricsState, moveMode, editMode, weather: weatherState }));
   ipcMain.handle('settings:get', () => store.get());
   ipcMain.handle('settings:set', (_e, patch) => {
     const prev = store.get();
@@ -396,6 +430,7 @@ function registerIpc() {
 
   ipcMain.on('mode:move', (_e, on) => setMoveMode(on));
   ipcMain.on('mode:edit', (_e, on) => setEditMode(on));
+  ipcMain.on('weather:refresh', () => refreshWeather());
   ipcMain.on('layout:reset', () => {
     const prev = store.get();
     store.resetLayout();
@@ -498,8 +533,8 @@ function runSmokeCheck() {
         layer,
         `{ api: typeof window.islet?.setEditMode, flips: document.querySelectorAll('.flip').length,
            cal: document.querySelectorAll('.cal-grid span').length, bars: document.querySelectorAll('.day-track').length,
-           ink: document.documentElement.dataset.ink }`,
-        (p) => p.api === 'function' && p.flips >= 2 && p.cal >= 49 && p.bars === 3,
+           ink: document.documentElement.dataset.ink, weather: !!document.querySelector('.w-weather') }`,
+        (p) => p.api === 'function' && p.flips >= 2 && p.cal >= 49 && p.bars === 3 && p.weather,
       );
       log(`widgets window visible=${layer.isVisible()} bounds=${JSON.stringify(layer.getBounds())}`);
       if (!layer.isVisible()) fail('widget layer is not visible');
@@ -540,6 +575,7 @@ function boot() {
   createIsland();
   createLayer();
   createTray();
+  refreshWeather();
   startBackgroundTimers();
 
   const onDisplays = () => {
@@ -574,6 +610,7 @@ if (!gotLock) {
   app.on('before-quit', () => {
     reader.stop();
     pinner.stop();
+    clearTimeout(weatherTimer);
     globalShortcut.unregisterAll();
     if (store) store.flush();
   });

@@ -41,6 +41,9 @@ const DEFAULTS = Object.freeze({
   showCalendar: true,
   showDay: true,
   showNote: true,
+  showWeather: true,
+  weatherCity: '', // empty = guess from this PC's time zone
+  weatherUnit: 'c', // c | f
   weekStart: 'mon', // mon | sun
   noteText: 'Pin a thought here.\nTray → Arrange widgets to move me.',
   noteColor: 'butter', // butter | rose | sky | mint
@@ -53,12 +56,14 @@ const DEFAULTS = Object.freeze({
   dayY: 0.3,
   noteX: 0.16,
   noteY: 0.72,
+  weatherX: 0.84,
+  weatherY: 0.72,
 
   // ---- System
   startWithWindows: false,
 });
 
-const POSITION_KEYS = ['clockX', 'clockY', 'calX', 'calY', 'dayX', 'dayY', 'noteX', 'noteY'];
+const POSITION_KEYS = ['clockX', 'clockY', 'calX', 'calY', 'dayX', 'dayY', 'noteX', 'noteY', 'weatherX', 'weatherY'];
 
 const RANGES = {
   scale: [0.7, 1.8],
@@ -77,6 +82,8 @@ const RANGES = {
   dayY: [0, 1],
   noteX: [0, 1],
   noteY: [0, 1],
+  weatherX: [0, 1],
+  weatherY: [0, 1],
 };
 
 const ENUMS = {
@@ -88,6 +95,7 @@ const ENUMS = {
   clockStyle: ['flip', 'stacked', 'line'],
   weekStart: ['mon', 'sun'],
   noteColor: ['butter', 'rose', 'sky', 'mint'],
+  weatherUnit: ['c', 'f'],
 };
 
 const NOTE_MAX = 400;
@@ -108,6 +116,8 @@ function sanitize(input, base = DEFAULTS) {
       if (v === 'primary' || v === 'cursor' || /^\d+$/.test(String(v))) out[key] = String(v);
     } else if (key === 'widgetsMonitor') {
       if (v === 'primary' || /^\d+$/.test(String(v))) out[key] = String(v);
+    } else if (key === 'weatherCity') {
+      if (typeof v === 'string') out[key] = v.replace(/[\u0000-\u001f]/g, '').trim().slice(0, 60);
     } else if (key === 'noteText') {
       if (typeof v === 'string') out[key] = v.slice(0, NOTE_MAX);
     } else if (key === 'radius') {

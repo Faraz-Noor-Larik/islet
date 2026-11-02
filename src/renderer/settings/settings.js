@@ -27,6 +27,12 @@
         node.addEventListener('change', () => set({ [key]: node.checked }));
       } else if (node.tagName === 'SELECT') {
         node.addEventListener('change', () => set({ [key]: node.value }));
+      } else if (node.type === 'text') {
+        const commit = () => set({ [key]: node.value });
+        node.addEventListener('change', commit);
+        node.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') node.blur();
+        });
       }
     });
   }
@@ -46,6 +52,8 @@
         node.checked = Boolean(value);
       } else if (node.tagName === 'SELECT') {
         node.value = String(value);
+      } else if (node.type === 'text') {
+        if (document.activeElement !== node) node.value = value;
       }
     });
     // corner radius: "Auto" means the shape decides

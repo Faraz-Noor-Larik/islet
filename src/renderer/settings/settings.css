@@ -130,7 +130,8 @@ input[type='checkbox']:checked::after { transform: translateX(16px); }
 .glyph.square { border-radius: 1px; }
 
 /* select + buttons */
-select {
+select,
+input[type='text'] {
   height: 32px;
   padding: 0 10px;
   border: 1px solid var(--line);
@@ -140,6 +141,8 @@ select {
   font: inherit;
   outline: none;
 }
+input[type='text'] { width: 190px; }
+input[type='text']:focus { border-color: var(--accent); }
 button {
   height: 34px;
   padding: 0 14px;

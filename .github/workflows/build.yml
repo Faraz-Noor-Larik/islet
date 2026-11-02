@@ -63,6 +63,12 @@ jobs:
         continue-on-error: true
         run: node scripts/lyrics-smoke.js
 
+      # Same idea for the weather widget: one real Open-Meteo lookup (free, no key).
+      - name: Smoke test - weather lookup (live)
+        shell: bash
+        continue-on-error: true
+        run: node scripts/weather-smoke.js
+
       - name: Build installer
         run: npx electron-builder --win nsis --x64 --publish never
 

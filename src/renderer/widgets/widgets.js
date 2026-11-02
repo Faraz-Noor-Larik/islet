@@ -12,6 +12,7 @@
     cal: { el: $('[data-id="cal"]'), x: 'calX', y: 'calY', scale: 'widgetsScale', show: 'showCalendar' },
     day: { el: $('[data-id="day"]'), x: 'dayX', y: 'dayY', scale: 'widgetsScale', show: 'showDay' },
     note: { el: $('[data-id="note"]'), x: 'noteX', y: 'noteY', scale: 'widgetsScale', show: 'showNote' },
+    weather: { el: $('[data-id="weather"]'), x: 'weatherX', y: 'weatherY', scale: 'widgetsScale', show: 'showWeather' },
   };
 
   let S = null; // current settings
@@ -209,6 +210,73 @@
     if (dayRefs.yearLabel.textContent !== y) dayRefs.yearLabel.textContent = y;
   }
 
+  /* ------------------------------------------------------------ weather */
+  // Static markup only (no data goes into these strings), drawn on a 48x48 grid.
+  const CLOUD = '<path class="cl" d="M15 36h19a8 8 0 0 0 1.2-15.9A11 11 0 0 0 14.2 23 6.5 6.5 0 0 0 15 36z"/>';
+  const SUN = (cx, cy, r) =>
+    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#ffc94d"/>` +
+    [0, 45, 90, 135, 180, 225, 270, 315]
+      .map((a) => {
+        const rad = (a * Math.PI) / 180;
+        const x1 = cx + Math.cos(rad) * (r + 3);
+        const y1 = cy + Math.sin(rad) * (r + 3);
+        const x2 = cx + Math.cos(rad) * (r + 6);
+        const y2 = cy + Math.sin(rad) * (r + 6);
+        return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#ffc94d" stroke-width="2.4" stroke-linecap="round"/>`;
+      })
+      .join('');
+  const MOON = '<path d="M30 8a15 15 0 1 0 10 25A12 12 0 0 1 30 8z" fill="#cfd8ff"/>';
+  const ICONS = {
+    clear: SUN(24, 24, 8),
+    moon: MOON,
+    partly: SUN(17, 17, 6) + CLOUD,
+    moonCloud: '<path d="M22 6a10 10 0 1 0 8 16A8 8 0 0 1 22 6z" fill="#cfd8ff"/>' + CLOUD,
+    cloud: CLOUD,
+    fog: CLOUD + '<g stroke="currentColor" stroke-width="2.4" stroke-linecap="round" opacity=".7"><line x1="12" y1="40" x2="36" y2="40"/><line x1="16" y1="45" x2="32" y2="45"/></g>',
+    rain: CLOUD + '<g stroke="#6cb7ff" stroke-width="2.6" stroke-linecap="round"><line x1="16" y1="39" x2="14" y2="44"/><line x1="24" y1="39" x2="22" y2="44"/><line x1="32" y1="39" x2="30" y2="44"/></g>',
+    snow: CLOUD + '<g fill="currentColor"><circle cx="16" cy="41" r="2"/><circle cx="24" cy="44" r="2"/><circle cx="32" cy="41" r="2"/></g>',
+    storm: CLOUD + '<path d="M25 33l-6 9h5l-2 6 8-10h-5l3-5z" fill="#ffc94d"/>',
+  };
+  const icon = (name, cls) => {
+    const svg = h('span', cls || 'wx-ico');
+    svg.innerHTML = `<svg viewBox="0 0 48 48" aria-hidden="true">${ICONS[name] || ICONS.cloud}</svg>`;
+    return svg;
+  };
+
+  let weather = null;
+  let weatherKey = '';
+  function renderWeather() {
+    const box = WIDGETS.weather.el;
+    const w = weather && weather.ok ? weather : null;
+    const key = w ? `${w.city}|${w.temp}|${w.icon}|${w.unit}|${w.hi}|${w.lo}|${w.days.map((d) => d.date + d.icon + d.hi + d.lo).join()}|${w.stale}` : 'none';
+    if (key === weatherKey) return;
+    weatherKey = key;
+    box.textContent = '';
+    box.classList.toggle('empty', !w);
+    if (!w) {
+      box.appendChild(h('div', 'wx-empty', weather && weather.error === 'no city' ? 'Add a city in Settings' : 'Weather loading…'));
+      return;
+    }
+    const top = h('div', 'wx-top');
+    top.appendChild(icon(w.icon, 'wx-ico big'));
+    const mid = h('div', 'wx-mid');
+    mid.append(h('div', 'wx-temp', `${w.temp}°`), h('div', 'wx-label', w.label));
+    top.appendChild(mid);
+    box.appendChild(top);
+    const where = h('div', 'wx-where');
+    where.append(h('span', '', w.city), h('span', 'wx-hl', `H ${w.hi}°  L ${w.lo}°`));
+    box.appendChild(where);
+    const row = h('div', 'wx-days');
+    for (const d of w.days) {
+      const [y, m, dd] = d.date.split('-').map(Number);
+      const cell = h('div', 'wx-day');
+      cell.append(h('span', 'wx-dow', new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(new Date(y, m - 1, dd))), icon(d.icon), h('span', 'wx-range', `${d.hi}° `));
+      cell.lastChild.appendChild(h('i', '', `${d.lo}°`));
+      row.appendChild(cell);
+    }
+    box.appendChild(row);
+  }
+
   /* ------------------------------------------------------------ note */
   const noteBody = $('#note-body');
   let noteTimer = null;
@@ -251,6 +319,7 @@
     if (!prev || clockKey !== `${S.clockStyle}|${S.showDate}|${S.clockSeconds}|${S.hour12}`) buildClock();
     calKey = '';
     renderNote();
+    renderWeather();
     layout();
     tick(true);
   }
@@ -357,7 +426,12 @@
   window.addEventListener('resize', layout);
   api.onSettings(applySettings);
   api.onEditMode(setEditing);
+  api.onWeather((w) => {
+    weather = w;
+    renderWeather();
+  });
   api.getState().then((state) => {
+    weather = state.weather || null;
     applySettings(state.settings);
     setEditing(state.editMode);
   });

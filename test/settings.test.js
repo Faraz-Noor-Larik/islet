@@ -70,3 +70,12 @@ test('resetLayout only moves widgets back, nothing else', () => {
   store.flush();
   assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).clockStyle, 'line');
 });
+
+test('weather settings: city is a trimmed, capped string; unit is c or f', () => {
+  assert.equal(sanitize({ weatherCity: '  Lahore \n' }).weatherCity, 'Lahore');
+  assert.equal(sanitize({ weatherCity: 'x'.repeat(200) }).weatherCity.length, 60);
+  assert.equal(sanitize({ weatherCity: 42 }).weatherCity, '');
+  assert.equal(sanitize({ weatherUnit: 'f' }).weatherUnit, 'f');
+  assert.equal(sanitize({ weatherUnit: 'kelvin' }).weatherUnit, 'c');
+  assert.equal(DEFAULTS.weatherX, 0.84);
+});

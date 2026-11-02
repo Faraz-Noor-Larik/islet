@@ -252,7 +252,8 @@ html[data-ink='black'] .flip::after {
 
 /* =========================================================== calendar + time passing (shared card look) */
 .w-cal,
-.w-day {
+.w-day,
+.w-weather {
   box-sizing: border-box;
   width: 268px;
   padding: 20px 22px 22px;
@@ -546,4 +547,99 @@ html.editing #editbar {
   background: #34d399;
   color: #04140d;
   font-weight: 650;
+}
+
+/* =========================================================== weather */
+.w-weather {
+  padding: 18px 22px 18px;
+}
+.w-weather.empty {
+  padding: 16px 22px;
+}
+.wx-empty {
+  font-size: 14px;
+  opacity: 0.6;
+}
+.wx-ico {
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  color: rgb(var(--ink));
+}
+.wx-ico svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+.wx-ico .cl {
+  fill: rgb(var(--ink));
+  fill-opacity: 0.88;
+}
+.wx-ico.big {
+  width: 58px;
+  height: 58px;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25));
+}
+.wx-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.wx-temp {
+  font-size: 50px;
+  font-weight: 250;
+  line-height: 1;
+  letter-spacing: -1.5px;
+}
+.wx-label {
+  margin-top: 5px;
+  font-size: 14px;
+  font-weight: 520;
+  opacity: 0.78;
+}
+.wx-where {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 14px 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(var(--ink), 0.12);
+  font-size: 15px;
+  font-weight: 600;
+}
+.wx-hl {
+  font-size: 12.5px;
+  font-weight: 500;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+.wx-days {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  text-align: center;
+}
+.wx-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.wx-dow {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+.wx-range {
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.wx-range i {
+  font-style: normal;
+  font-weight: 500;
+  opacity: 0.5;
 }
