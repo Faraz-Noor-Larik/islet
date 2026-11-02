@@ -76,6 +76,15 @@
     document.getElementById('moveBtn').textContent = on ? 'Done moving' : 'Drag it into place';
   });
 
+  let arranging = false;
+  const arrangeBtn = document.getElementById('arrangeBtn');
+  arrangeBtn.addEventListener('click', () => api.setEditMode(!arranging));
+  document.getElementById('resetLayoutBtn').addEventListener('click', () => api.resetWidgetLayout());
+  api.onEditMode((on) => {
+    arranging = on;
+    arrangeBtn.textContent = on ? 'Done arranging' : 'Arrange widgets';
+  });
+
   /* ----- monitors ----- */
   async function loadDisplays() {
     const select = document.getElementById('monitor');
@@ -91,6 +100,19 @@
     add('cursor', 'Follow my mouse');
     displays.forEach((d) => add(String(d.index), `Screen ${d.index + 1}${d.primary ? ' (main)' : ''} · ${d.width}×${d.height}`));
     if (settings) select.value = String(settings.monitor);
+
+    // widgets: one fixed screen (no "follow my mouse" for a desktop layer)
+    const wsel = document.getElementById('widgetsMonitor');
+    wsel.innerHTML = '';
+    const addW = (value, label) => {
+      const o = document.createElement('option');
+      o.value = value;
+      o.textContent = label;
+      wsel.appendChild(o);
+    };
+    addW('primary', 'Main screen');
+    displays.forEach((d) => addW(String(d.index), `Screen ${d.index + 1}${d.primary ? ' (main)' : ''} · ${d.width}×${d.height}`));
+    if (settings) wsel.value = String(settings.widgetsMonitor);
   }
 
   bindControls();

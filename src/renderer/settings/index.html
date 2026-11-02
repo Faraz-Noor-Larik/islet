@@ -10,11 +10,83 @@
   <main>
     <header>
       <h1>Islet</h1>
-      <p>Changes apply instantly. Look at the top of your screen.</p>
+      <p>Changes apply instantly. Widgets first, then the island at the top of your screen.</p>
     </header>
 
     <section>
-      <h2>Shape</h2>
+      <h2>Widgets</h2>
+      <label class="row toggle"><span>Show widgets on the desktop</span><input type="checkbox" data-key="widgets" /></label>
+      <div class="row">
+        <label>Where they sit</label>
+        <div class="seg small" data-key="widgetsLayer">
+          <button data-value="desktop">On the desktop</button>
+          <button data-value="top">Above everything</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Text colour</label>
+        <div class="seg small" data-key="widgetsInk">
+          <button data-value="white">White</button>
+          <button data-value="black">Black</button>
+        </div>
+      </div>
+      <div class="row">
+        <label for="widgetsScale">Widget size</label>
+        <div class="ctl"><input type="range" id="widgetsScale" data-key="widgetsScale" min="0.6" max="1.6" step="0.05" data-fmt="pct" /><output></output></div>
+      </div>
+      <div class="row">
+        <label for="widgetsMonitor">Screen</label>
+        <select id="widgetsMonitor" data-key="widgetsMonitor"></select>
+      </div>
+      <label class="row toggle"><span>Calendar</span><input type="checkbox" data-key="showCalendar" /></label>
+      <label class="row toggle"><span>Time passing (day, week, year)</span><input type="checkbox" data-key="showDay" /></label>
+      <label class="row toggle"><span>Sticky note</span><input type="checkbox" data-key="showNote" /></label>
+      <div class="row">
+        <label>Note colour</label>
+        <div class="seg small" data-key="noteColor">
+          <button data-value="butter">Butter</button>
+          <button data-value="rose">Rose</button>
+          <button data-value="sky">Sky</button>
+          <button data-value="mint">Mint</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Week starts on</label>
+        <div class="seg small" data-key="weekStart">
+          <button data-value="mon">Monday</button>
+          <button data-value="sun">Sunday</button>
+        </div>
+      </div>
+      <div class="buttons">
+        <button id="arrangeBtn" class="primary">Arrange widgets</button>
+        <button id="resetLayoutBtn">Reset positions</button>
+      </div>
+      <p class="note">Widgets are click-through and sit behind your windows. Press Ctrl+Alt+W to lift them above everything for a few seconds. To type in the sticky note, use Arrange.</p>
+    </section>
+
+    <section>
+      <h2>Clock</h2>
+      <label class="row toggle"><span>Show the clock</span><input type="checkbox" data-key="showClock" /></label>
+      <div class="row">
+        <label>Style</label>
+        <div class="seg small" data-key="clockStyle">
+          <button data-value="flip">Flip</button>
+          <button data-value="stacked">Stacked</button>
+          <button data-value="line">Line</button>
+        </div>
+      </div>
+      <div class="row">
+        <label for="clockScale">Clock size</label>
+        <div class="ctl"><input type="range" id="clockScale" data-key="clockScale" min="0.5" max="2.5" step="0.05" data-fmt="pct" /><output></output></div>
+      </div>
+      <label class="row toggle"><span>Date, weekday and week number</span><input type="checkbox" data-key="showDate" /></label>
+      <label class="row toggle"><span>Show seconds</span><input type="checkbox" data-key="clockSeconds" /></label>
+      <label class="row toggle"><span>12-hour clock</span><input type="checkbox" data-key="hour12" /></label>
+      <p class="note">The clock is pinned to the exact middle of the screen and never moves. Everything else you can drag around.</p>
+    </section>
+
+    <section>
+      <h2>Island shape</h2>
       <div class="seg shapes" data-key="shape">
         <button data-value="pill"><span class="glyph pill"></span>Pill</button>
         <button data-value="rounded"><span class="glyph rounded"></span>Rounded</button>
@@ -32,7 +104,7 @@
     </section>
 
     <section>
-      <h2>Size &amp; style</h2>
+      <h2>Island size &amp; style</h2>
       <div class="row">
         <label for="scale">Size</label>
         <div class="ctl"><input type="range" id="scale" data-key="scale" min="0.7" max="1.8" step="0.05" data-fmt="pct" /><output></output></div>
@@ -52,7 +124,7 @@
     </section>
 
     <section>
-      <h2>Position</h2>
+      <h2>Island position</h2>
       <div class="row">
         <label for="x">Left / right</label>
         <div class="ctl"><input type="range" id="x" data-key="x" min="-1200" max="1200" step="2" data-fmt="px" /><output></output></div>
@@ -72,7 +144,7 @@
     </section>
 
     <section>
-      <h2>Awareness</h2>
+      <h2>Island awareness</h2>
       <div class="row">
         <label>Mouse comes near</label>
         <div class="seg small" data-key="hover">
@@ -88,10 +160,10 @@
     </section>
 
     <section>
-      <h2>Clock</h2>
-      <label class="row toggle"><span>Show the time</span><input type="checkbox" data-key="showTime" /></label>
-      <label class="row toggle"><span>12-hour clock</span><input type="checkbox" data-key="hour12" /></label>
+      <h2>Time on the island</h2>
+      <label class="row toggle"><span>Show the time on the island</span><input type="checkbox" data-key="showTime" /></label>
       <label class="row toggle"><span>Show seconds</span><input type="checkbox" data-key="showSeconds" /></label>
+      <p class="note">The big clock lives in the middle of the screen now, so the island is just music by default. With no music playing the island hides itself.</p>
     </section>
 
     <section>

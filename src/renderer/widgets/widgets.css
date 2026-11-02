@@ -1,0 +1,549 @@
+:root {
+  --ink: 255, 255, 255;
+  --card: 16, 17, 21;
+  --card-a: 0.66;
+  --accent: 255, 107, 87;
+  --kw: 1; /* per-widget scale, set from JS */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --font: 'Segoe UI Variable Display', 'Segoe UI Variable Text', 'Segoe UI', Inter, system-ui, -apple-system, sans-serif;
+}
+html[data-ink='black'] {
+  --ink: 20, 20, 24;
+  --card: 255, 255, 255;
+  --card-a: 0.58;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: var(--font);
+  color: rgb(var(--ink));
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+}
+
+#stage {
+  position: absolute;
+  inset: 0;
+}
+
+/* every widget is positioned by its centre; JS sets left/top and --k */
+.w {
+  position: absolute;
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(var(--k, 1));
+  transform-origin: center;
+  will-change: transform;
+}
+.w[hidden] {
+  display: none;
+}
+html:not([data-ink='black']) .loose {
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.38);
+}
+
+/* =========================================================== clock */
+.w-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.cl-meta,
+.cl-foot {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 6px;
+  box-sizing: border-box;
+  font-size: 23px;
+  font-weight: 560;
+  letter-spacing: 0.3px;
+}
+.cl-foot {
+  justify-content: center;
+  font-size: 19px;
+  font-weight: 500;
+  opacity: 0.82;
+  letter-spacing: 0.4px;
+}
+.cl-meta span:last-child {
+  opacity: 0.78;
+}
+
+/* --- flip */
+.cl-face {
+  display: flex;
+  gap: 14px;
+}
+.flip {
+  --cw: 172px;
+  --ch: 196px;
+  --fs: 128px;
+  position: relative;
+  width: var(--cw);
+  height: var(--ch);
+  perspective: 900px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -2px;
+  color: rgb(var(--ink));
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.28));
+}
+.flip .upper,
+.flip .lower,
+.flip .flap {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  overflow: hidden;
+  background: rgba(var(--card), var(--card-a));
+  box-shadow: inset 0 0 0 1px rgba(var(--ink), 0.07);
+}
+.flip .upper,
+.flip .flap.up {
+  top: 0;
+  border-radius: 18px 18px 0 0;
+}
+.flip .lower,
+.flip .flap.down {
+  top: 50%;
+  border-radius: 0 0 18px 18px;
+}
+.flip b {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: var(--ch);
+  line-height: var(--ch);
+  text-align: center;
+  font-size: var(--fs);
+  font-weight: inherit;
+}
+.flip .upper b,
+.flip .flap.up b {
+  top: 0;
+}
+.flip .lower b,
+.flip .flap.down b {
+  top: calc(var(--ch) / -2);
+}
+/* the hinge */
+.flip::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% - 1.5px);
+  height: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 6;
+}
+html[data-ink='black'] .flip::after {
+  background: rgba(0, 0, 0, 0.18);
+}
+.flip .flap {
+  visibility: hidden;
+  backface-visibility: hidden;
+  z-index: 4;
+}
+.flip .flap.up {
+  transform-origin: 50% 100%;
+}
+.flip .flap.down {
+  transform-origin: 50% 0;
+  transform: rotateX(90deg);
+}
+.flip.go .flap {
+  visibility: visible;
+}
+.flip.go .flap.up {
+  animation: flip-up 0.24s ease-in forwards;
+}
+.flip.go .flap.down {
+  animation: flip-down 0.24s ease-out 0.24s forwards;
+}
+@keyframes flip-up {
+  to {
+    transform: rotateX(-90deg);
+  }
+}
+@keyframes flip-down {
+  to {
+    transform: rotateX(0deg);
+  }
+}
+.flip .ampm {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  z-index: 7;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: 1px;
+  opacity: 0.78;
+  letter-spacing: 0.6px;
+}
+.flip.small {
+  --cw: 172px;
+}
+
+/* --- stacked (tall, thin) */
+.w-clock[data-style='stacked'] .cl-face {
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  line-height: 0.84;
+  font-weight: 200;
+  font-size: 196px;
+  letter-spacing: -6px;
+  font-variant-numeric: tabular-nums;
+}
+.stack-sec {
+  margin-top: 18px;
+  font-size: 26px;
+  font-weight: 400;
+  letter-spacing: 6px;
+  opacity: 0.8;
+}
+.w-clock[data-style='stacked'] .cl-meta {
+  justify-content: center;
+  gap: 18px;
+}
+
+/* --- line (one thin row) */
+.w-clock[data-style='line'] .cl-face {
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 200;
+  font-size: 176px;
+  line-height: 1;
+  letter-spacing: -5px;
+  font-variant-numeric: tabular-nums;
+}
+.line-sec {
+  font-size: 44px;
+  font-weight: 300;
+  letter-spacing: 0;
+  opacity: 0.7;
+}
+.line-ampm {
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+.colon {
+  position: relative;
+  top: -0.06em;
+  margin: 0 0.02em;
+  animation: blink 2s steps(1) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.28;
+  }
+}
+
+/* =========================================================== calendar + time passing (shared card look) */
+.w-cal,
+.w-day {
+  box-sizing: border-box;
+  width: 268px;
+  padding: 20px 22px 22px;
+  border-radius: 22px;
+  background: rgba(var(--card), var(--card-a));
+  box-shadow: inset 0 0 0 1px rgba(var(--ink), 0.08), 0 14px 34px rgba(0, 0, 0, 0.26);
+}
+.cal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.cal-head .mo {
+  font-size: 27px;
+  font-weight: 650;
+  letter-spacing: -0.3px;
+}
+.cal-head .yr {
+  font-size: 15px;
+  font-weight: 500;
+  opacity: 0.55;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  row-gap: 3px;
+  text-align: center;
+  font-size: 14.5px;
+  font-variant-numeric: tabular-nums;
+}
+.cal-grid span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  border-radius: 50%;
+}
+.cal-grid .dow {
+  height: 22px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.6px;
+  opacity: 0.45;
+}
+.cal-grid .we {
+  opacity: 0.55;
+}
+.cal-grid .today {
+  background: rgb(var(--accent));
+  color: #fff;
+  font-weight: 700;
+  opacity: 1;
+  box-shadow: 0 4px 14px rgba(var(--accent), 0.5);
+}
+
+/* =========================================================== time passing */
+.day-title {
+  margin-bottom: 14px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+.day-row + .day-row {
+  margin-top: 15px;
+}
+.day-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 7px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.day-line b {
+  font-size: 20px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.day-track {
+  height: 5px;
+  border-radius: 5px;
+  background: rgba(var(--ink), 0.16);
+  overflow: hidden;
+}
+.day-track i {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: rgb(var(--ink));
+}
+.day-row:first-of-type .day-track i {
+  background: rgb(var(--accent));
+}
+
+/* =========================================================== note */
+.w-note {
+  --rot: -2deg;
+  --note: 252, 224, 130;
+  --note-ink: 62, 50, 18;
+  width: 232px;
+  min-height: 168px;
+  padding: 26px 20px 22px;
+  box-sizing: border-box;
+  border-radius: 4px 4px 22px 4px;
+  background: linear-gradient(160deg, rgba(var(--note), 1), rgba(var(--note), 0.92));
+  color: rgb(var(--note-ink));
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3), 0 2px 0 rgba(255, 255, 255, 0.35) inset;
+}
+.w-note[data-color='rose'] {
+  --note: 250, 190, 204;
+  --note-ink: 72, 28, 44;
+}
+.w-note[data-color='sky'] {
+  --note: 178, 214, 250;
+  --note-ink: 24, 44, 76;
+}
+.w-note[data-color='mint'] {
+  --note: 182, 236, 206;
+  --note-ink: 22, 64, 44;
+}
+.w-note::after {
+  /* curled corner */
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 0 0 22px 0;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.13) 50%);
+  pointer-events: none;
+}
+.note-body {
+  font-family: 'Segoe Print', 'Ink Free', 'Bradley Hand', 'Comic Sans MS', 'Caveat', cursive;
+  font-size: 20px;
+  line-height: 1.32;
+  white-space: pre-wrap;
+  word-break: break-word;
+  outline: none;
+  user-select: none;
+  min-height: 90px;
+}
+.grip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: grab;
+}
+.grip i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(var(--note-ink), 0.45);
+}
+
+/* =========================================================== arranging */
+#veil {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.32);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+html.editing #veil {
+  opacity: 1;
+}
+html.editing .w {
+  outline: 2px dashed rgba(255, 255, 255, 0.85);
+  outline-offset: 8px;
+  cursor: grab;
+}
+html.editing .w-clock {
+  outline-style: solid;
+  outline-color: rgba(255, 255, 255, 0.4);
+  cursor: default;
+}
+html.editing .w-clock::after {
+  content: 'Fixed in the centre';
+  position: absolute;
+  left: 50%;
+  bottom: -46px;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(16, 17, 21, 0.85);
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+html.editing .w.dragging {
+  cursor: grabbing;
+  z-index: 10;
+}
+html.editing .w-note .grip {
+  display: flex;
+}
+html.editing .note-body {
+  user-select: text;
+  cursor: text;
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin: -2px -6px;
+}
+.guide {
+  position: fixed;
+  display: none;
+  background: rgba(var(--accent), 0.95);
+  z-index: 20;
+  pointer-events: none;
+}
+#guide-x {
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+}
+#guide-y {
+  left: 0;
+  right: 0;
+  height: 1.5px;
+}
+.guide.on {
+  display: block;
+}
+
+#editbar {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translate(-50%, -140%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 18px;
+  border-radius: 999px;
+  background: rgba(16, 17, 21, 0.92);
+  color: #fff;
+  font-size: 13.5px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.45s var(--ease), opacity 0.3s ease;
+  z-index: 30;
+  white-space: nowrap;
+}
+html.editing #editbar {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  pointer-events: auto;
+}
+#editbar .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgb(var(--accent));
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+#editbar .sub {
+  opacity: 0.6;
+}
+#editbar button {
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+#editbar button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+#editbar button.primary {
+  background: #34d399;
+  color: #04140d;
+  font-weight: 650;
+}

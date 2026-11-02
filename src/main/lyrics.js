@@ -2,7 +2,7 @@
 
 // Synced lyrics from LRCLIB (https://lrclib.net), a free, open lyrics database. No account or key.
 const BASE = 'https://lrclib.net/api';
-const UA = 'Islet/0.1.0 (desktop widget)';
+const UA = 'Islet/0.2.0 (desktop widget)';
 
 /** Parse an .lrc string into [{ t: seconds, text }] sorted by time. */
 function parseLrc(lrc) {

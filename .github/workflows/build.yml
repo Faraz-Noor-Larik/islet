@@ -39,8 +39,8 @@ jobs:
             Write-Host "::error title=reader-smoke::not JSON: $flat"
           }
 
-      # Starts the real app (island + settings window) for a few seconds and checks both pages loaded
-      # and the preload bridge works.
+      # Starts the real app (island, widget layer, settings) and checks every page loaded, the preload
+      # bridge works, the widgets get pinned to the desktop layer and arrange mode comes and goes.
       - name: Smoke test - app starts
         shell: bash
         continue-on-error: true
@@ -48,6 +48,8 @@ jobs:
           ISLET_SMOKE: '1'
         run: |
           timeout 90 npx electron . --disable-gpu 2>&1 | tee smoke.log || true
+          pin=$(grep -E "^\[layer\] pin" smoke.log | tr '\n' ' ')
+          echo "::notice title=widgets-pin::${pin:-no pin line}"
           if grep -q "SMOKE_OK" smoke.log; then
             echo "::notice title=app-smoke::SMOKE_OK"
           else

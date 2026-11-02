@@ -21,8 +21,11 @@ contextBridge.exposeInMainWorld('islet', {
   onLyrics: (cb) => on('lyrics:data', cb),
   onCursor: (cb) => on('cursor', cb),
   onMoveMode: (cb) => on('mode:move', cb),
+  onEditMode: (cb) => on('mode:edit', cb),
   // actions
   setMoveMode: (on_) => ipcRenderer.send('mode:move', Boolean(on_)),
+  setEditMode: (on_) => ipcRenderer.send('mode:edit', Boolean(on_)),
+  resetWidgetLayout: () => ipcRenderer.send('layout:reset'),
   dragStart: () => ipcRenderer.send('drag:start'),
   dragMove: () => ipcRenderer.send('drag:move'),
   dragEnd: () => ipcRenderer.send('drag:end'),

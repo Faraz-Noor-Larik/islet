@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en" data-ink="white">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+  <title>Islet widgets</title>
+  <link rel="stylesheet" href="widgets.css" />
+</head>
+<body>
+  <div id="veil"></div>
+  <div id="guide-x" class="guide"></div>
+  <div id="guide-y" class="guide"></div>
+
+  <div id="stage">
+    <section class="w w-clock" data-id="clock" aria-label="Clock"></section>
+    <section class="w w-cal" data-id="cal" aria-label="Calendar"></section>
+    <section class="w w-day" data-id="day" aria-label="Time passing"></section>
+    <section class="w w-note" data-id="note" aria-label="Note">
+      <div class="grip" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="note-body" id="note-body" spellcheck="false"></div>
+    </section>
+  </div>
+
+  <div id="editbar">
+    <span class="dot"></span>
+    <b>Arranging widgets</b>
+    <span class="sub">Drag anything except the clock: it stays dead centre. Things snap to line up.</span>
+    <button id="resetLayout" type="button">Reset layout</button>
+    <button id="done" type="button" class="primary">Done</button>
+  </div>
+
+  <script src="dateinfo.js"></script>
+  <script src="widgets.js"></script>
+</body>
+</html>

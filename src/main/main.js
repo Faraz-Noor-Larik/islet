@@ -1,12 +1,13 @@
 'use strict';
 
 const path = require('path');
-const { app, BrowserWindow, Tray, Menu, screen, ipcMain, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, screen, ipcMain, nativeImage, globalShortcut, powerMonitor } = require('electron');
 const { Store } = require('./settings');
 const position = require('./positioning');
 const { MediaReader } = require('./media');
 const { Timeline } = require('./timeline');
 const { fetchLyrics } = require('./lyrics');
+const { Pinner } = require('./zorder');
 
 const SMOKE = process.env.ISLET_SMOKE === '1'; // CI: start, check the windows load, quit
 const ASSETS = path.join(__dirname, '..', 'assets');
@@ -15,6 +16,7 @@ const PRELOAD = path.join(__dirname, 'preload.js');
 
 let store;
 let island = null;
+let layer = null; // the full-screen widget layer (clock, calendar, note...)
 let settingsWin = null;
 let tray = null;
 let moveMode = false;
@@ -23,17 +25,23 @@ let fullscreenNow = false;
 let lastDisplayId = null;
 let lastCursorKey = '';
 let drag = null;
+let editMode = false; // arranging widgets
+let peeking = false; // widgets temporarily lifted above your windows
+let peekTimer = null;
+let layerRun = Promise.resolve();
+let lastPin = null;
 
 const timeline = new Timeline();
 let mediaState = { status: 'none', track: null, pos: 0, at: Date.now(), duration: 0 };
 let lyricsState = { key: null, status: 'none', lines: [] };
 const lyricsCache = new Map();
 const reader = new MediaReader();
+const pinner = new Pinner();
 
 /* ------------------------------------------------------------------ helpers */
 
 function broadcast(channel, payload) {
-  for (const win of [island, settingsWin]) {
+  for (const win of [island, layer, settingsWin]) {
     if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
   }
 }
@@ -102,6 +110,131 @@ function createIsland() {
   });
 }
 
+/* ------------------------------------------------------- widget layer */
+
+function layerDisplay() {
+  const primary = screen.getPrimaryDisplay();
+  return position.resolveDisplay(
+    { displays: screen.getAllDisplays(), primary, cursorDisplay: primary },
+    store.get().widgetsMonitor,
+  );
+}
+
+// One pixel shorter than the screen on purpose: a borderless window that covers the whole monitor
+// counts as a fullscreen app (the taskbar hides, and the island would think a game is running).
+function layerBounds(display) {
+  const b = display.bounds;
+  return { x: b.x, y: b.y, width: b.width, height: Math.max(1, b.height - 1) };
+}
+
+function createLayer() {
+  layer = new BrowserWindow({
+    ...layerBounds(layerDisplay()),
+    show: false,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    focusable: false,
+    hasShadow: false,
+    webPreferences: { preload: PRELOAD, contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  layer.setIgnoreMouseEvents(true); // normally the widgets never get in the way of a click
+  layer.loadFile(path.join(RENDERER, 'widgets', 'index.html'));
+  layer.once('ready-to-show', () => refreshLayer());
+  layer.on('closed', () => {
+    layer = null;
+  });
+}
+
+/** Queue a re-layout of the widget layer. Runs one at a time so the async pin can't race itself. */
+function refreshLayer() {
+  layerRun = layerRun.then(doRefreshLayer).catch((e) => console.log(`[layer] ${e && e.message}`));
+  return layerRun;
+}
+
+async function doRefreshLayer() {
+  if (!layer || layer.isDestroyed()) return;
+  const s = store.get();
+  const hide = !s.widgets || (!editMode && s.widgetsLayer === 'top' && fullscreenNow);
+  if (hide) {
+    if (layer.isVisible()) layer.hide();
+    return;
+  }
+
+  const b = layerBounds(layerDisplay());
+  const cur = layer.getBounds();
+  if (cur.x !== b.x || cur.y !== b.y || cur.width !== b.width || cur.height !== b.height) {
+    layer.setBounds(b);
+    layer.setBounds(b);
+  }
+
+  if (editMode) {
+    // arranging: above everything, takes the mouse and the keyboard
+    layer.setOpacity(1);
+    layer.setFocusable(true);
+    layer.setIgnoreMouseEvents(false);
+    layer.setAlwaysOnTop(true, 'floating');
+    layer.show();
+    layer.focus();
+    return;
+  }
+
+  layer.setIgnoreMouseEvents(true);
+  layer.setFocusable(false);
+
+  if (s.widgetsLayer === 'top' || peeking) {
+    layer.setAlwaysOnTop(true, 'floating'); // below the island, above everything else
+    layer.setOpacity(1);
+    if (!layer.isVisible()) layer.showInactive();
+    return;
+  }
+
+  // On the desktop: above the wallpaper and icons, underneath every window.
+  const wasVisible = layer.isVisible();
+  if (!wasVisible) layer.setOpacity(0); // no flash over your apps while it slips underneath them
+  layer.setAlwaysOnTop(false);
+  if (!wasVisible) layer.showInactive();
+  lastPin = await pinner.pin(layer, { debug: SMOKE });
+  console.log(`[layer] pin ${lastPin.ok ? 'ok' : 'FAILED'}: ${lastPin.detail}${lastPin.z ? ` | z: ${lastPin.z}` : ''}`);
+  if (layer && !layer.isDestroyed()) layer.setOpacity(1);
+}
+
+function setEditMode(on) {
+  editMode = Boolean(on);
+  if (editMode) {
+    peeking = false;
+    clearTimeout(peekTimer);
+    if (!store.get().widgets) {
+      const prev = store.get();
+      store.set({ widgets: true });
+      applySettings(prev);
+    }
+  }
+  broadcast('mode:edit', editMode);
+  rebuildTrayMenu();
+  refreshLayer();
+}
+
+/** Ctrl+Alt+W: lift the widgets above your windows for a few seconds, then put them back. */
+function peekWidgets() {
+  if (editMode || !store.get().widgets) return;
+  clearTimeout(peekTimer);
+  peeking = !peeking;
+  if (peeking) {
+    peekTimer = setTimeout(() => {
+      peeking = false;
+      refreshLayer();
+    }, 6000);
+  }
+  refreshLayer();
+}
+
 function openSettings() {
   if (settingsWin && !settingsWin.isDestroyed()) {
     settingsWin.show();
@@ -139,6 +272,15 @@ function rebuildTrayMenu() {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Settings…', click: openSettings },
+      { type: 'separator' },
+      { label: 'Show widgets', type: 'checkbox', checked: store.get().widgets, click: (item) => {
+        const prev = store.get();
+        store.set({ widgets: item.checked });
+        applySettings(prev);
+      } },
+      { label: 'Arrange widgets', type: 'checkbox', checked: editMode, click: (item) => setEditMode(item.checked) },
+      { label: 'Peek at widgets  (Ctrl+Alt+W)', click: peekWidgets },
+      { type: 'separator' },
       { label: 'Move the island', type: 'checkbox', checked: moveMode, click: (item) => setMoveMode(item.checked) },
       { label: 'Hide the island', type: 'checkbox', checked: userHidden, click: (item) => {
         userHidden = item.checked;
@@ -173,6 +315,10 @@ function applySettings(prev) {
     applyBounds();
     updateVisibility();
   }
+  if (!prev || prev.widgets !== s.widgets || prev.widgetsLayer !== s.widgetsLayer || prev.widgetsMonitor !== s.widgetsMonitor) {
+    refreshLayer();
+    rebuildTrayMenu();
+  }
   if (app.isPackaged && (!prev || prev.startWithWindows !== s.startWithWindows)) {
     app.setLoginItemSettings({ openAtLogin: s.startWithWindows });
   }
@@ -202,7 +348,10 @@ async function loadLyrics(track, duration) {
 function onSample(sample) {
   const wasFullscreen = fullscreenNow;
   fullscreenNow = Boolean(sample.fs);
-  if (fullscreenNow !== wasFullscreen) updateVisibility();
+  if (fullscreenNow !== wasFullscreen) {
+    updateVisibility();
+    if (store.get().widgetsLayer === 'top') refreshLayer();
+  }
 
   const { send, trackChanged, hasTrack, state } = timeline.update(sample);
   if (!send) return;
@@ -221,7 +370,7 @@ function onSample(sample) {
 /* ------------------------------------------------------------------- IPC */
 
 function registerIpc() {
-  ipcMain.handle('state:get', () => ({ settings: store.get(), media: mediaState, lyrics: lyricsState, moveMode }));
+  ipcMain.handle('state:get', () => ({ settings: store.get(), media: mediaState, lyrics: lyricsState, moveMode, editMode }));
   ipcMain.handle('settings:get', () => store.get());
   ipcMain.handle('settings:set', (_e, patch) => {
     const prev = store.get();
@@ -246,6 +395,12 @@ function registerIpc() {
   });
 
   ipcMain.on('mode:move', (_e, on) => setMoveMode(on));
+  ipcMain.on('mode:edit', (_e, on) => setEditMode(on));
+  ipcMain.on('layout:reset', () => {
+    const prev = store.get();
+    store.resetLayout();
+    applySettings(prev);
+  });
   ipcMain.on('settings:open', openSettings);
   ipcMain.on('app:quit', () => app.quit());
 
@@ -307,38 +462,73 @@ function runSmokeCheck() {
     failed = true;
     console.log(`SMOKE_FAIL ${why}`);
   };
-  island.webContents.on('console-message', (_e, level, message) => {
-    if (level >= 3) fail(`renderer error: ${message}`);
-  });
-  island.webContents.on('render-process-gone', (_e, d) => fail(`renderer gone: ${d.reason}`));
-  island.webContents.on('preload-error', (_e, p, err) => fail(`preload error: ${err && err.message}`));
+  const watch = (name, win) => {
+    win.webContents.on('console-message', (_e, level, message) => {
+      if (level >= 3) fail(`${name} renderer error: ${message}`);
+    });
+    win.webContents.on('render-process-gone', (_e, d) => fail(`${name} renderer gone: ${d.reason}`));
+    win.webContents.on('preload-error', (_e, p, err) => fail(`${name} preload error: ${err && err.message}`));
+  };
+  const probe = async (name, win, expr, ok) => {
+    try {
+      const raw = await win.webContents.executeJavaScript(`JSON.stringify(${expr})`);
+      log(`${name} probe ${raw}`);
+      if (!ok(JSON.parse(raw))) fail(`${name} probe failed ${raw}`);
+    } catch (e) {
+      fail(`${name} probe threw ${e.message}`);
+    }
+  };
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  watch('island', island);
+  watch('widgets', layer);
+
   setTimeout(async () => {
     try {
-      const probe = await island.webContents.executeJavaScript(
-        `JSON.stringify({ api: typeof window.islet?.getState, island: !!document.getElementById('island'), shape: document.documentElement.className })`,
+      await probe(
+        'island',
+        island,
+        `{ api: typeof window.islet?.getState, island: !!document.getElementById('island') }`,
+        (p) => p.api === 'function' && p.island,
       );
-      log(`island probe ${probe}`);
-      const parsed = JSON.parse(probe);
-      if (parsed.api !== 'function' || !parsed.island) fail(`island probe failed ${probe}`);
+
+      await layerRun; // the widgets have been placed by now
+      await probe(
+        'widgets',
+        layer,
+        `{ api: typeof window.islet?.setEditMode, flips: document.querySelectorAll('.flip').length,
+           cal: document.querySelectorAll('.cal-grid span').length, bars: document.querySelectorAll('.day-track').length,
+           ink: document.documentElement.dataset.ink }`,
+        (p) => p.api === 'function' && p.flips >= 2 && p.cal >= 49 && p.bars === 3,
+      );
+      log(`widgets window visible=${layer.isVisible()} bounds=${JSON.stringify(layer.getBounds())}`);
+      if (!layer.isVisible()) fail('widget layer is not visible');
+      if (!lastPin || !lastPin.ok) fail(`pin to desktop failed: ${lastPin && lastPin.detail}`);
+
+      // arrange mode on, then off again: it must come up, and go back underneath
+      setEditMode(true);
+      await layerRun;
+      await wait(400);
+      await probe('arrange', layer, `{ editing: document.documentElement.classList.contains('editing') }`, (p) => p.editing);
+      setEditMode(false);
+      await layerRun;
+      await wait(300);
+      await probe('arrange-off', layer, `{ editing: document.documentElement.classList.contains('editing') }`, (p) => !p.editing);
+      if (!lastPin || !lastPin.ok) fail(`re-pin after arranging failed: ${lastPin && lastPin.detail}`);
+
       openSettings();
-      setTimeout(async () => {
-        try {
-          const sp = await settingsWin.webContents.executeJavaScript(
-            `JSON.stringify({ api: typeof window.islet?.getState, controls: document.querySelectorAll('[data-key]').length })`,
-          );
-          log(`settings probe ${sp}`);
-          const p2 = JSON.parse(sp);
-          if (p2.api !== 'function' || p2.controls < 10) fail(`settings probe failed ${sp}`);
-        } catch (e) {
-          fail(`settings probe threw ${e.message}`);
-        }
-        if (!failed) console.log('SMOKE_OK');
-        app.exit(failed ? 1 : 0);
-      }, 2500);
+      await wait(2500);
+      await probe(
+        'settings',
+        settingsWin,
+        `{ api: typeof window.islet?.getState, controls: document.querySelectorAll('[data-key]').length }`,
+        (p) => p.api === 'function' && p.controls >= 25,
+      );
     } catch (e) {
-      fail(`probe threw ${e.message}`);
-      app.exit(1);
+      fail(`smoke threw ${e.message}`);
     }
+    if (!failed) console.log('SMOKE_OK');
+    app.exit(failed ? 1 : 0);
   }, 3000);
 }
 
@@ -348,12 +538,21 @@ function boot() {
   store.load();
   registerIpc();
   createIsland();
+  createLayer();
   createTray();
   startBackgroundTimers();
 
-  screen.on('display-added', applyBounds);
-  screen.on('display-removed', applyBounds);
-  screen.on('display-metrics-changed', applyBounds);
+  const onDisplays = () => {
+    applyBounds();
+    refreshLayer();
+  };
+  screen.on('display-added', onDisplays);
+  screen.on('display-removed', onDisplays);
+  screen.on('display-metrics-changed', onDisplays);
+  // coming back from sleep or the lock screen can shuffle the window stack: put the widgets back
+  powerMonitor.on('resume', refreshLayer);
+  powerMonitor.on('unlock-screen', refreshLayer);
+  if (!SMOKE) globalShortcut.register('Control+Alt+W', peekWidgets);
 
   reader.on('sample', onSample);
   reader.on('log', (m) => console.log(`[reader] ${m}`));
@@ -374,6 +573,8 @@ if (!gotLock) {
   });
   app.on('before-quit', () => {
     reader.stop();
+    pinner.stop();
+    globalShortcut.unregisterAll();
     if (store) store.flush();
   });
   app.whenReady().then(boot);

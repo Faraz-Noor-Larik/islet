@@ -1,8 +1,8 @@
 {
   "name": "islet",
   "productName": "Islet",
-  "version": "0.1.0",
-  "description": "A minimal floating island for your clock, your music and live synced lyrics.",
+  "version": "0.2.0",
+  "description": "A floating music island with live lyrics, plus a desktop clock and widgets.",
   "author": "Islet",
   "license": "MIT",
   "main": "src/main/main.js",

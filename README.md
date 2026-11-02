@@ -1,7 +1,21 @@
 # Islet
 
-A minimal floating island for Windows that lives at the top-centre of your screen. It shows the
-time, what you're listening to, and live synced lyrics. It never blocks a click.
+A floating music island for Windows plus a set of desktop widgets. The island lives at the
+top-centre of your screen and shows what you're listening to with live synced lyrics. In the middle of
+the screen sits a fixed flip clock with calendar, time-passing bars and a sticky note around it. None of
+it blocks a click.
+
+## Widgets
+
+- **Clock**, pinned to the exact centre and never moves. Flip (with a real flip animation), stacked or
+  line. Date, weekday, week and day of the year around it.
+- **Calendar**, **time passing** (today / this week / this year) and a **sticky note**.
+- Widgets sit *on the desktop*: above the wallpaper and icons, underneath your windows. They are
+  click-through. **Ctrl+Alt+W** lifts them above everything for six seconds. Or choose "above everything".
+- **Arrange widgets** (tray menu): drag them around with snapping guides, type in the note.
+  Settings also has text colour (white / black), widget size, note colour, week start and screen.
+
+## Island
 
 - **Music from anything**: it reads the same Windows media session as the volume flyout, so Spotify,
   YouTube in the browser, Apple Music, VLC and so on all work. No logins, no API keys.
@@ -38,4 +52,6 @@ The GitHub Actions workflow builds the installer on a Windows runner and uploads
 | Lyrics lookup, LRC parsing, YouTube title cleaning | `src/main/lyrics.js` |
 | Placement maths (monitors, offsets, drag) | `src/main/positioning.js` |
 | Windows, tray, settings | `src/main/main.js` |
+| Pins the widget layer just above the desktop | `src/main/zorder.js` |
+| Widgets (clock, calendar, note...) | `src/renderer/widgets/` |
 | The island and the settings UI | `src/renderer/` |
