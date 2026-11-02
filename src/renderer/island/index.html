@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en" class="shape-pill theme-dark">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+  <title>Islet</title>
+  <link rel="stylesheet" href="island.css" />
+</head>
+<body>
+  <div id="stage">
+    <div id="island" class="island" data-state="idle">
+      <div class="top">
+        <div class="eq" id="eq" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="slot">
+          <div class="line" id="line"></div>
+          <div class="meta">
+            <div class="title" id="title"></div>
+            <div class="artist" id="artist"></div>
+          </div>
+        </div>
+        <div class="clock" id="clock"></div>
+      </div>
+      <div class="bottom">
+        <div class="cur" id="cur"></div>
+        <div class="next" id="next"></div>
+        <div class="progress">
+          <span id="elapsed">0:00</span>
+          <div class="bar"><i id="fill"></i></div>
+          <span id="remaining">0:00</span>
+        </div>
+      </div>
+      <div class="hint">Drag me anywhere &middot; double-click to finish</div>
+    </div>
+  </div>
+  <script src="island.js"></script>
+</body>
+</html>

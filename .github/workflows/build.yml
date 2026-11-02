@@ -1,0 +1,65 @@
+name: Build Windows installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      # Runs the real media reader once on a Windows machine. There is no music playing on a CI
+      # runner, so "none" is expected; what matters is that the script compiles and starts, and
+      # that the Windows media API loads without an error. The result shows up as an annotation.
+      - name: Smoke test - media reader (PowerShell)
+        shell: powershell
+        continue-on-error: true
+        env:
+          ISLET_ONCE: '1'
+        run: |
+          $out = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File src/main/reader.ps1 2>&1 | Out-String).Trim()
+          try {
+            $j = $out | ConvertFrom-Json
+            Write-Host "::notice title=reader-smoke::status=$($j.status) fullscreen=$($j.fs) err=[$($j.err)]"
+          } catch {
+            $flat = ($out -replace "[\r\n]+", " | ")
+            Write-Host "::error title=reader-smoke::not JSON: $flat"
+          }
+
+      # Starts the real app (island + settings window) for a few seconds and checks both pages loaded
+      # and the preload bridge works.
+      - name: Smoke test - app starts
+        shell: bash
+        continue-on-error: true
+        env:
+          ISLET_SMOKE: '1'
+        run: |
+          timeout 90 npx electron . --disable-gpu 2>&1 | tee smoke.log || true
+          if grep -q "SMOKE_OK" smoke.log; then
+            echo "::notice title=app-smoke::SMOKE_OK"
+          else
+            msg=$(grep -E "SMOKE_FAIL|\[smoke\]|Error" smoke.log | head -5 | tr '\n' ' ')
+            echo "::error title=app-smoke::no SMOKE_OK. ${msg:-no output}"
+          fi
+
+      - name: Build installer
+        run: npx electron-builder --win nsis --x64 --publish never
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Islet-Windows
+          path: release/*.exe
+          if-no-files-found: error

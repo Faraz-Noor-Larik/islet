@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+  <title>Islet</title>
+  <link rel="stylesheet" href="settings.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Islet</h1>
+      <p>Changes apply instantly. Look at the top of your screen.</p>
+    </header>
+
+    <section>
+      <h2>Shape</h2>
+      <div class="seg shapes" data-key="shape">
+        <button data-value="pill"><span class="glyph pill"></span>Pill</button>
+        <button data-value="rounded"><span class="glyph rounded"></span>Rounded</button>
+        <button data-value="notch"><span class="glyph notch"></span>Notch</button>
+        <button data-value="square"><span class="glyph square"></span>Square</button>
+      </div>
+      <div class="row">
+        <label for="radius">Corner radius</label>
+        <div class="ctl">
+          <label class="check small"><input type="checkbox" id="radiusAuto" /> Auto</label>
+          <input type="range" id="radius" min="0" max="60" step="1" />
+          <output id="radiusOut"></output>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Size &amp; style</h2>
+      <div class="row">
+        <label for="scale">Size</label>
+        <div class="ctl"><input type="range" id="scale" data-key="scale" min="0.7" max="1.8" step="0.05" data-fmt="pct" /><output></output></div>
+      </div>
+      <div class="row">
+        <label for="opacity">Opacity</label>
+        <div class="ctl"><input type="range" id="opacity" data-key="opacity" min="0.4" max="1" step="0.05" data-fmt="pct" /><output></output></div>
+      </div>
+      <div class="row">
+        <label>Theme</label>
+        <div class="seg small" data-key="theme">
+          <button data-value="dark">Dark</button>
+          <button data-value="light">Light</button>
+          <button data-value="auto">Auto</button>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Position</h2>
+      <div class="row">
+        <label for="x">Left / right</label>
+        <div class="ctl"><input type="range" id="x" data-key="x" min="-1200" max="1200" step="2" data-fmt="px" /><output></output></div>
+      </div>
+      <div class="row">
+        <label for="y">From the top</label>
+        <div class="ctl"><input type="range" id="y" data-key="y" min="0" max="400" step="1" data-fmt="px" /><output></output></div>
+      </div>
+      <div class="row">
+        <label for="monitor">Screen</label>
+        <select id="monitor" data-key="monitor"></select>
+      </div>
+      <div class="buttons">
+        <button id="moveBtn" class="primary">Drag it into place</button>
+        <button id="centerBtn">Centre it</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Awareness</h2>
+      <div class="row">
+        <label>Mouse comes near</label>
+        <div class="seg small" data-key="hover">
+          <button data-value="expand">Open</button>
+          <button data-value="fade">Fade away</button>
+          <button data-value="none">Ignore</button>
+        </div>
+      </div>
+      <label class="row toggle"><span>Hide in fullscreen apps and games</span><input type="checkbox" data-key="hideInFullscreen" /></label>
+      <label class="row toggle"><span>Open briefly when a new song starts</span><input type="checkbox" data-key="autoExpand" /></label>
+      <label class="row toggle"><span>Stay above other windows</span><input type="checkbox" data-key="alwaysOnTop" /></label>
+      <p class="note">The island never blocks clicks. Anything under it still works.</p>
+    </section>
+
+    <section>
+      <h2>Clock</h2>
+      <label class="row toggle"><span>Show the time</span><input type="checkbox" data-key="showTime" /></label>
+      <label class="row toggle"><span>12-hour clock</span><input type="checkbox" data-key="hour12" /></label>
+      <label class="row toggle"><span>Show seconds</span><input type="checkbox" data-key="showSeconds" /></label>
+    </section>
+
+    <section>
+      <h2>Music &amp; lyrics</h2>
+      <label class="row toggle"><span>Show what's playing</span><input type="checkbox" data-key="showMusic" /></label>
+      <label class="row toggle"><span>Show synced lyrics</span><input type="checkbox" data-key="showLyrics" /></label>
+      <div class="row">
+        <label for="lyricsOffset">Lyrics timing</label>
+        <div class="ctl"><input type="range" id="lyricsOffset" data-key="lyricsOffset" min="-3000" max="3000" step="100" data-fmt="sec" /><output></output></div>
+      </div>
+      <p class="note">Move it right if lyrics show up too early, left if too late. Lyrics come from LRCLIB; some songs have none.</p>
+    </section>
+
+    <section>
+      <h2>System</h2>
+      <label class="row toggle"><span>Start with Windows</span><input type="checkbox" data-key="startWithWindows" /></label>
+      <div class="buttons">
+        <button id="resetBtn">Reset everything</button>
+        <button id="quitBtn" class="danger">Quit Islet</button>
+      </div>
+    </section>
+  </main>
+  <script src="settings.js"></script>
+</body>
+</html>
