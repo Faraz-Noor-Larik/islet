@@ -55,6 +55,12 @@ jobs:
             echo "::error title=app-smoke::no SMOKE_OK. ${msg:-no output}"
           fi
 
+      # Talks to the real LRCLIB service once to prove the lookup + parsing work end to end.
+      - name: Smoke test - lyrics lookup (live)
+        shell: bash
+        continue-on-error: true
+        run: node scripts/lyrics-smoke.js
+
       - name: Build installer
         run: npx electron-builder --win nsis --x64 --publish never
 
